@@ -1,0 +1,46 @@
+Software Defined X
+
+“Deep learning is … hitting a memory bottleneck. While the tensor computation in top-of-the-line GPUs increased by 32× over the last ﬁve years, the total available memory only grew by 2.5×. This prevents researchers from exploring larger architectures, as training large networks requires more memory for storing intermediate outputs.” [1] 
+
+Discussions and suggestions [2]:
+1)	“Decoded cache to reduce pre-processing overhead... A future direction is to evaluate the benefits of caching decoded data items instead of the current approach of caching raw encoded items … However, this is nontrivial; decoding increases the dataset size by 5 – 7 ×. It is an interesting future direction to enable decoded caching without incurring the high space overhead, possibly using serialized data formats.”
+2)	Automatic prep off load to GPUs. (1) prep takes up scarce GPU memory. (2) Prep may interfere with computations. Automating it by GPU and CPU utilization.
+3)	Minibatch as a service. entirely disaggregating learning from data management.
+4)	Cost-performance tradeoff of upgrading hardware. An expensive GPU may not solve data stall issue and can perform worse than a cluster of less expensive GPUs. 
+
+3 papers:
+1)	Memory Optimization for Deep Networks (MONet) [1, 7]
+Checkpointing: (2016, [4]); Checkmate (2019, [6]) solves the problem in a more general setting 
+“In this paper, we present MONET, an automatic framework that minimizes both the memory footprint and computational overhead of deep networks.”
+1.2-1.8× less memory
+Equation 9
+Track three memory and cost contributors: forward pass, backward pass, and recomputation of forward operators.
+“Find a global checkpointing schedule and local forward/backward implementations that jointly minimize the computation cost within a memory budget.”
+2)	PAIO: General, Portable I/O Optimizations With Minor Application Modifications [5]
+Software-Defined Storage (SDS)
+ﬁrst general-purpose SDS data plane framework; build custom-made data plane stages employable over different I/O layers; provides differentiated treatment of requests and allows implementing ﬁne-tuned storage services to cope with varied storage policies.
+3)	CheckFreq: Frequent, Fine-Grained DNN Checkpointing [3]
+“an automatic, ﬁne-grained checkpointing framework”; consistent, low-cost checkpoints at iteration level using a resumable data iterator, automatic determination and tuning of checkpointing frequency; reduces recovery time for popular DNNs from hours to seconds, while incurring low runtime overhead.
+
+深度学习持续到达内存瓶颈。Tensor在GPU的计算量过去5年增加了32倍，但内存只增加了2.5倍。内存瓶颈阻碍大架构计算，因为训练大型网络需要更多内存来存储中间输出 [1] 。
+讨论和未来方向的建议 [2]: 
+1) 用解码缓存（decoded cache）来减少预处理的内存开销。计算前的图像解码是成本最高的操作。未来可以考虑直接缓存解码数据而不是编码数据。但解码后数据量增加5-7倍，所以启用缓存解码了的序列化数据格式（serialized data formats）是一个方向。
+2) 自动卸载GPU预处理。在 GPU 上执行图像等预处理(图像解压，裁剪，调整等)占用稀缺的 GPU 内存，同时可能干扰算法执行。把预处理移到CPU，实现GPU 和 CPU 利用率的自动化是一个未来方向。
+3) 把小批量(minibatch)处理作为一种服务。可以将小批量请求作为服务，从而将学习与数据管理完全分离。
+4) 权衡升级硬件的成本性能。因为计算的时间主要由数据停顿(data stalls, 指在计算过程中等待数据)控制，升级昂贵的GPU不如把计算分配到多个不昂贵的GPU上，以解决数据停顿问题和加快运算时间。这个是要提高分布式GPUs利用率。
+
+1)	Memory Optimization for Deep Networks (MONet) [1, 7]
+大型计算需要把中间参数/结果放在内存。为了预防计算中断后要重新开始，需要对这些中间量打检查点(checkpointing)。Checkpointing是指定期把优化状态，中间参数/结果等存起来，以便中断后可以继续不至于从头开始 (这在16年针对深度网络的计算提出 [4], 19年通用化 [6])。checkpointing消耗内存和时间(而且training在checkpointing阶段可能会停止)。
+作者追踪了三个主要存储和计算成本：前向计算、后向计算和前向算子的重新计算，并把他们放入一个目标方程（文章里的方程(9)），从而找到一个全局打点调度和本地前向/后向计算实现的结合，以达到同时最小化计算成本和内存消耗的目的。MONet可减少1.2-1.8倍的内存使用。
+2)	PAIO: A Software-Deﬁned Storage Data Plane Framework [5]
+在不同 I/O 上使用定制数据阶段层。提供对请求的差异化处理和允许实施微调的存储服务以应对不同的存储策略。
+3)	CheckFreq: Frequent, Fine-Grained DNN Checkpointing [3]
+一个checkpointing的framework，可自动决定checkpointing频率。可减少checkpointing引起的时延，并实现中断后(从小时到秒)快速恢复。
+
+[1] https://arxiv.org/abs/2010.14501
+[2] https://arxiv.org/abs/2007.06775
+[3] https://github.com/msr-fiddle/CheckFreq
+[4] https://arxiv.org/abs/1604.06174 
+[5] https://arxiv.org/abs/2106.03617
+[6] https://arxiv.org/abs/1910.02653
+[7] https://github.com/utsaslab/MONeT
